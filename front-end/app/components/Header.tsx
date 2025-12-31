@@ -86,15 +86,15 @@ export default function Header() {
                                 </ul>
                             </li>
                             <li>
-                                <a href="contact.html">
+                                <Link href="/contact">
                                     <i className="fas fa-headset" /> پشتیبانی
-                                </a>
+                                </Link>
                             </li>
                             <li>
-                                <a href="authentication.html" className="auth-simple-link">
+                                <Link href="/auth" className="auth-simple-link">
                                     <i className="fas fa-user-circle" />
                                     <span>ورود / ثبت نام</span>
-                                </a>
+                                </Link>
                             </li>
                         </ul>
                     </div>
