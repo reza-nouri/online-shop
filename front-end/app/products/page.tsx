@@ -1,8 +1,39 @@
 import Image from 'next/image'
 import '@/app/assets/css/productviacat.css'
 import laptopImage from '@/app/assets/images/desktop.jpg'; // یا مسیر نسبی
+import apiClient from '../lib/axios';
+import { Category, Product } from '../types/product';
+import { AppConfig } from '../constant/constant';
+import Link from 'next/link';
 
-export default function Products() {
+async function getProducts(): Promise<Product[] | null> {
+    try {
+        const res = await apiClient.get('/api/products');
+        return res.data;
+    } catch (error) {
+        console.error('Error fetching product:', error);
+        return null;
+    }
+}
+
+async function getCategories(): Promise<Category[] | null> {
+    try {
+        const res = await apiClient.get('/api/category');
+        return res.data;
+    } catch (error) {
+        console.error('Error fetching product:', error);
+        return null;
+    }
+}
+
+export default async function Products() {
+    const products = await getProducts();
+    const categories = await getCategories();
+
+    const formatPrice = (price: number) => {
+        return new Intl.NumberFormat('fa-IR').format(price) + ' تومان';
+    }
+
     return (
         <>
             <>
@@ -13,21 +44,15 @@ export default function Products() {
                         <div className="breadcrumb">
                             <ul>
                                 <li>
-                                    <a href="index.html">
+                                    <Link href="/">
                                         <i className="fas fa-home" /> صفحه اصلی
-                                    </a>
+                                    </Link>
                                 </li>
                                 <li>
                                     <a href="#">
                                         <i className="fas fa-box" /> محصولات
                                     </a>
                                 </li>
-                                <li>
-                                    <a href="#">
-                                        <i className="fas fa-laptop" /> الکترونیک
-                                    </a>
-                                </li>
-                                <li>لپ‌تاپ و کامپیوتر</li>
                             </ul>
                         </div>
                         {/* هدر دسته‌بندی */}
@@ -38,38 +63,20 @@ export default function Products() {
                                 </div>
                                 <span>لپ‌تاپ و کامپیوتر</span>
                             </div>
-                           
+
                         </div>
                         {/* زیر دسته‌ها */}
                         <div className="subcategories">
-                            <a href="#" className="subcategory-card">
-                                <div className="subcategory-icon">
-                                    <i className="fas fa-laptop" />
-                                </div>
-                                <div className="subcategory-name">لپ‌تاپ</div>
-                                <div className="subcategory-count">۱۸ محصول</div>
-                            </a>
-                            <a href="#" className="subcategory-card">
-                                <div className="subcategory-icon">
-                                    <i className="fas fa-desktop" />
-                                </div>
-                                <div className="subcategory-name">کامپیوتر رومیزی</div>
-                                <div className="subcategory-count">۱۲ محصول</div>
-                            </a>
-                            <a href="#" className="subcategory-card">
-                                <div className="subcategory-icon">
-                                    <i className="fas fa-gamepad" />
-                                </div>
-                                <div className="subcategory-name">کامپیوتر گیمینگ</div>
-                                <div className="subcategory-count">۸ محصول</div>
-                            </a>
-                            <a href="#" className="subcategory-card">
-                                <div className="subcategory-icon">
-                                    <i className="fas fa-server" />
-                                </div>
-                                <div className="subcategory-name">قطعات و لوازم جانبی</div>
-                                <div className="subcategory-count">۲۴ محصول</div>
-                            </a>
+                            {categories?.map((category: Category) => (
+                                <a href="#" className="subcategory-card">
+                                    <div className="subcategory-icon">
+                                        <i className="fas fa-laptop" />
+                                    </div>
+                                    <div className="subcategory-name">{category.name}</div>
+                                </a>
+                            ))
+
+                            }
                         </div>
                         <div className="category-container">
                             {/* فیلتر سایدبار */}
@@ -150,231 +157,35 @@ export default function Products() {
                                     </div>
                                 </div>
                                 <div className="products-grid" id="productsContainer">
-                                    {/* محصول 1 */}
-                                    <div className="product-card">
-                                        <div className="product-image">
-                                            <Image
-                                                src={laptopImage}
-                                                alt="لپ‌تاپ گیمینگ"
-                                                height={220}
-                                                width={278}
-                                            />
-                                            <span className="product-badge">تخفیف ویژه</span>
-                                        </div>
-                                        <div className="product-info">
-                                            <h3 className="product-title">
-                                                لپ‌تاپ گیمینگ ایسوس ROG Strix G15
-                                            </h3>
-                                            <div className="product-specs">
-                                                پردازنده Core i7 - رم ۱۶GB - حافظه ۱TB SSD - کارت گرافیک RTX
-                                                3060
+                                    {products?.map((product: Product) => (
+                                        <div className="product-card" key={product.ID}>
+                                            <div className="product-image">
+                                                <img
+                                                    src={AppConfig.backendFilrUrl + product?.imageUrl}
+                                                    alt={product?.name}
+                                                    height={220}
+                                                    width={278}
+                                                />
+                                                <span className="product-badge">تخفیف ویژه</span>
                                             </div>
-                                            <div className="product-price">
-                                                <div>
-                                                    <span className="current-price">۶۴,۹۰۰,۰۰۰ تومان</span>
-                                                    <span className="old-price">۷۲,۰۰۰,۰۰۰ تومان</span>
+                                            <div className="product-info">
+                                                <h3 className="product-title">
+                                                    {product.name}
+                                                </h3>
+
+                                                <div className="product-price">
+                                                    <div>
+                                                        <span className="current-price">{formatPrice(product?.price!)}</span>
+                                                    </div>
                                                 </div>
+                                                <button className="add-to-cart">
+                                                    <i className="fas fa-cart-plus" /> افزودن به سبد خرید
+                                                </button>
                                             </div>
-                                            <button className="add-to-cart">
-                                                <i className="fas fa-cart-plus" /> افزودن به سبد خرید
-                                            </button>
                                         </div>
-                                    </div>
-                                    {/* محصول 2 */}
-                                    <div className="product-card">
-                                        <div className="product-image">
-                                            <Image
-                                                src={laptopImage}
-                                                alt="لپ‌تاپ گیمینگ"
-                                                height={220}
-                                                width={278}
-                                            />
-                                            <span className="product-badge">جدید</span>
-                                        </div>
-                                        <div className="product-info">
-                                            <h3 className="product-title">لپ‌تاپ اپل مک‌بوک پرو ۱۴ اینچ</h3>
-                                            <div className="product-specs">
-                                                چیپ M2 Pro - رم ۱۶GB - حافظه ۵۱۲GB SSD - نمایشگر Liquid Retina
-                                                XDR
-                                            </div>
-                                            <div className="product-price">
-                                                <div>
-                                                    <span className="current-price">۸۹,۹۰۰,۰۰۰ تومان</span>
-                                                    <span className="old-price">۹۵,۰۰۰,۰۰۰ تومان</span>
-                                                </div>
-                                            </div>
-                                            <button className="add-to-cart">
-                                                <i className="fas fa-cart-plus" /> افزودن به سبد خرید
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {/* محصول 3 */}
-                                    <div className="product-card">
-                                        <div className="product-image">
-                                            <Image
-                                                src={laptopImage}
-                                                alt="لپ‌تاپ گیمینگ"
-                                                height={220}
-                                                width={278}
-                                            />
-                                            <span className="product-badge">پرفروش</span>
-                                        </div>
-                                        <div className="product-info">
-                                            <h3 className="product-title">لپ‌تاپ ایسر Nitro 5 گیمینگ</h3>
-                                            <div className="product-specs">
-                                                پردازنده Core i5 - رم ۸GB - حافظه ۵۱۲GB SSD - کارت گرافیک GTX
-                                                1650
-                                            </div>
-                                            <div className="product-price">
-                                                <div>
-                                                    <span className="current-price">۳۲,۵۰۰,۰۰۰ تومان</span>
-                                                    <span className="old-price">۳۸,۰۰۰,۰۰۰ تومان</span>
-                                                </div>
-                                            </div>
-                                            <button className="add-to-cart">
-                                                <i className="fas fa-cart-plus" /> افزودن به سبد خرید
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {/* محصول 4 */}
-                                    <div className="product-card">
-                                        <div className="product-image">
-                                            <Image
-                                                src={laptopImage}
-                                                alt="لپ‌تاپ گیمینگ"
-                                                height={220}
-                                                width={278}
-                                            />
-                                            <span className="product-badge">محصول منتخب</span>
-                                        </div>
-                                        <div className="product-info">
-                                            <h3 className="product-title">لپ‌تاپ لنوو Legion 5 Pro</h3>
-                                            <div className="product-specs">
-                                                پردازنده Ryzen 7 - رم ۱۶GB - حافظه ۱TB SSD - کارت گرافیک RTX
-                                                3070
-                                            </div>
-                                            <div className="product-price">
-                                                <div>
-                                                    <span className="current-price">۷۵,۹۰۰,۰۰۰ تومان</span>
-                                                    <span className="old-price">۸۴,۰۰۰,۰۰۰ تومان</span>
-                                                </div>
-                                            </div>
-                                            <button className="add-to-cart">
-                                                <i className="fas fa-cart-plus" /> افزودن به سبد خرید
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {/* محصول 5 */}
-                                    <div className="product-card">
-                                        <div className="product-image">
-                                            <Image
-                                                src={laptopImage}
-                                                alt="لپ‌تاپ گیمینگ"
-                                                height={220}
-                                                width={278}
-                                            />
-                                            <span className="product-badge">فروش ویژه</span>
-                                        </div>
-                                        <div className="product-info">
-                                            <h3 className="product-title">کامپیوتر رومیزی گیمینگ آماده</h3>
-                                            <div className="product-specs">
-                                                پردازنده Core i9 - رم ۳۲GB - حافظه ۲TB SSD - کارت گرافیک RTX
-                                                4080
-                                            </div>
-                                            <div className="product-price">
-                                                <div>
-                                                    <span className="current-price">۱۵۲,۰۰۰,۰۰۰ تومان</span>
-                                                    <span className="old-price">۱۷۰,۰۰۰,۰۰۰ تومان</span>
-                                                </div>
-                                            </div>
-                                            <button className="add-to-cart">
-                                                <i className="fas fa-cart-plus" /> افزودن به سبد خرید
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {/* محصول 6 */}
-                                    <div className="product-card">
-                                        <div className="product-image">
-                                            <Image
-                                                src={laptopImage}
-                                                alt="لپ‌تاپ گیمینگ"
-                                                height={220}
-                                                width={278}
-                                            />
-                                            <span className="product-badge">پرطرفدار</span>
-                                        </div>
-                                        <div className="product-info">
-                                            <h3 className="product-title">
-                                                لپ‌تاپ مایکروسافت سرفیس لپ‌تاپ ۴
-                                            </h3>
-                                            <div className="product-specs">
-                                                پردازنده Core i7 - رم ۱۶GB - حافظه ۵۱۲GB SSD - تاچ اسکرین
-                                            </div>
-                                            <div className="product-price">
-                                                <div>
-                                                    <span className="current-price">۶۸,۵۰۰,۰۰۰ تومان</span>
-                                                    <span className="old-price">۷۵,۰۰۰,۰۰۰ تومان</span>
-                                                </div>
-                                            </div>
-                                            <button className="add-to-cart">
-                                                <i className="fas fa-cart-plus" /> افزودن به سبد خرید
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {/* محصول 7 */}
-                                    <div className="product-card">
-                                        <div className="product-image">
-                                            <Image
-                                                src={laptopImage}
-                                                alt="لپ‌تاپ گیمینگ"
-                                                height={220}
-                                                width={278}
-                                            />
-                                            <span className="product-badge">تخفیف</span>
-                                        </div>
-                                        <div className="product-info">
-                                            <h3 className="product-title">لپ‌تاپ دل XPS 13</h3>
-                                            <div className="product-specs">
-                                                پردازنده Core i5 - رم ۸GB - حافظه ۲۵۶GB SSD - نمایشگر ۴K
-                                            </div>
-                                            <div className="product-price">
-                                                <div>
-                                                    <span className="current-price">۴۵,۹۰۰,۰۰۰ تومان</span>
-                                                    <span className="old-price">۵۲,۰۰۰,۰۰۰ تومان</span>
-                                                </div>
-                                            </div>
-                                            <button className="add-to-cart">
-                                                <i className="fas fa-cart-plus" /> افزودن به سبد خرید
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {/* محصول 8 */}
-                                    <div className="product-card">
-                                        <div className="product-image">
-                                            <Image
-                                                src={laptopImage}
-                                                alt="لپ‌تاپ گیمینگ"
-                                                height={220}
-                                                width={278}
-                                            />
-                                            <span className="product-badge">جدیدترین</span>
-                                        </div>
-                                        <div className="product-info">
-                                            <h3 className="product-title">لپ‌تاپ اچ‌پی Spectre x360</h3>
-                                            <div className="product-specs">
-                                                پردازنده Core i7 - رم ۱۶GB - حافظه ۱TB SSD - قلم دیجیتال
-                                            </div>
-                                            <div className="product-price">
-                                                <div>
-                                                    <span className="current-price">۷۲,۰۰۰,۰۰۰ تومان</span>
-                                                    <span className="old-price">۸۰,۰۰۰,۰۰۰ تومان</span>
-                                                </div>
-                                            </div>
-                                            <button className="add-to-cart">
-                                                <i className="fas fa-cart-plus" /> افزودن به سبد خرید
-                                            </button>
-                                        </div>
-                                    </div>
+                                    ))
+
+                                    }
                                 </div>
                                 {/* پینیشن */}
                                 <div className="pagination">

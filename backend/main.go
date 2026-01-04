@@ -17,6 +17,7 @@ package main
 
 import (
 	"online-shop/config"
+	"online-shop/middleware"
 	"online-shop/routes"
 	"online-shop/seed"
 
@@ -27,6 +28,8 @@ func main() {
 	config.ConnectDB()
 	seed.Seed()
 	r := gin.Default()
+
+	r.Use(middleware.CORSMiddleware())
 	r.Static("/uploads", "./uploads")
 
 	routes.SetupRoutes(r)

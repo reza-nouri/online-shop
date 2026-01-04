@@ -4,58 +4,267 @@
 package seed
 
 import (
+	"encoding/json"
+	"fmt"
 	"online-shop/config"
 	"online-shop/models"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/datatypes"
+	"gorm.io/gorm"
 )
+
+type ProductAttribute struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// ساختار ورودی ساده‌تر برای سید
+type SeedProduct struct {
+	Name        string             `json:"name"`
+	Price       float64            `json:"price"`
+	Description string             `json:"description"`
+	Tags        []string           `json:"tags"`
+	Attributes  []ProductAttribute `json:"attributes"`
+	CategoryID  uint               `json:"category_id"`
+	InMainPage  bool               `json:"is_active"`
+	ImageURL    string             `json:"imageUrl"`
+}
 
 func Seed() {
 	// جلوگیری از تکرار
 	var count int64
 	config.DB.Model(&models.User{}).Count(&count)
 	if count > 0 {
-		return
+		// کاربران پیش‌فرض
+		adminPass, _ := bcrypt.GenerateFromPassword([]byte("admin123"), 10)
+		userPass, _ := bcrypt.GenerateFromPassword([]byte("user123"), 10)
+
+		admin := models.User{
+			Username: "admin",
+			Password: string(adminPass),
+			Role:     "admin",
+		}
+
+		user := models.User{
+			Username: "user",
+			Password: string(userPass),
+			Role:     "user",
+		}
+
+		config.DB.Create(&admin)
+		config.DB.Create(&user)
 	}
 
-	// کاربران پیش‌فرض
-	adminPass, _ := bcrypt.GenerateFromPassword([]byte("admin123"), 10)
-	userPass, _ := bcrypt.GenerateFromPassword([]byte("user123"), 10)
+	// سپس محصولات را ایجاد می‌کنیم
+	err := seedProducts(config.DB)
+	fmt.Println(err)
+}
 
-	admin := models.User{
-		Username: "admin",
-		Password: string(adminPass),
-		Role:     "admin",
-	}
-
-	user := models.User{
-		Username: "user",
-		Password: string(userPass),
-		Role:     "user",
-	}
-
-	config.DB.Create(&admin)
-	config.DB.Create(&user)
-
-	// محصولات نمونه
+// ایجاد محصولات
+func seedProducts(db *gorm.DB) error {
 	categories := []models.Category{
-		{Name: "موبایل"},
-		{Name: "لپ‌تاپ"},
-		{Name: "تبلت"},
+		{
+			Name: "لپ‌تاپ",
+		},
+		{
+			Name: "موبایل",
+		},
+		{
+			Name: "تبلت",
+		},
+		{
+			Name: "کامپیوتر",
+		},
+		{
+			Name: "لوازم جانبی",
+		},
 	}
 
-	// ذخیره با Preload
-	config.DB.Create(&categories)
+	// حذف و ایجاد مجدد (برای development)
+	db.Exec("DELETE FROM categories")
 
-	// محصولات نمونه
-	products := []models.Product{
-		{Name: "گوشی سامسونگ Galaxy A55", Description: "گوشی موبایل سامسونگ مدل Galaxy A55 نسخه‌ی به روزشده‌ی میان‌رده‌ی محبوب A54 محسوب می‌شود. این گوشی با بهره‌مندی از نمایشگر 6.6 اینچی Super AMOLED با کیفیت با نرخ تازه‌سازی 120 فریم برثانیه یکی از بهترین نمایشگرهای میانرده را دارد. در بخش دوربین، رزولوشن 50 مگاپیکسلی و لرزشگیر اپتیکال تصاویر بسیار با کیفیتی ثبت می‌کند و باتری 5000 میلی‌آمپرساعتی آن به راحتی تا یک روز شارژدهی دارد. اما یکی از مهمترین پیشرفت‌های این گوشی در بخش طراحی است و به قاب پشتی شیشه‌ای و فریم آلومینیومی مجهز شده است که علاوه بر زیبایی، استحکام بسیار خوبی به آن بخشیده است. در مجموع، Galaxy A55 با همه‌ی امکانات مناسبی که دارد توانسته است در مدت کمی به یکی از پرفروش‌ترین میان‌رده‌های بازار تبدیل شده است.",
-			Price: 2000000, ImageURL: "uploads/a55.jpg", CategoryID: categories[0].ID, InMainPage: true},
-		{Name: "لپ‌تاپ اپل مدل MacBook Air MW0Y3 2025 LLA", Description: "مک‌بوک ایر مدل 2025 با نمایشگر ۱۳.۶ اینچی، یکی از جدیدترین لپ‌تاپ‌های شرکت اپل است که با طراحی بسیار باریک، سبک و مدرن عرضه شده است. این مدل به چیپ قدرتمند Apple M4 مجهز شده که عملکردی سریع و مصرف انرژی بهینه‌تری نسبت به نسل‌های قبلی ارائه می‌دهد. نمایشگر Liquid Retina با وضوح بالا، رنگ‌هایی زنده و دقیق را ارائه می‌دهد که آن را برای تماشای فیلم، طراحی گرافیکی، و کارهای روزمره ایده‌آل می‌سازد.",
-			Price: 127000000, ImageURL: "uploads/mackbook.jpg", CategoryID: categories[1].ID, InMainPage: true},
-		{Name: "تبلت ۱۴.۶ اینچ سامسونگ مدل Galaxy Tab S10 Ultra Wi-Fi", Description: "تبلت پرچمدار سامسونگ گلکسی Tab S10 Ultra با ابعاد غول‌پیکر و سخت‌افزار قدرتمندش حتی می‌تواند نقش یک لپ‌تاپ را ایفا کند. بدنه تمام‌فلزی خوش‌ساخت این تبلت با بهره‌مندی از استاندارد IP68 حس پریمیوم و لوکسی را القا می‌کند. وزن ۷۱۸ گرمی این تبلت به‌خودی خود زیاد است؛ اما با در نظر گرفتن کاربری و قابلیت‌های آن، می‌توانید گلکسی Tab S10 Ultra را در کیف و کوله‌های مخصوص برای حمل‌ونقل راحت قرار دهید.",
-			Price: 5000000, ImageURL: "uploads/galaxy-tab.jpg", CategoryID: categories[2].ID, InMainPage: true},
+	// استفاده از index به جای value
+	for i := 0; i < len(categories); i++ {
+		if err := db.Create(&categories[i]).Error; err != nil {
+			return err
+		}
 	}
 
-	config.DB.Create(&products)
+	products := []SeedProduct{
+		{
+			Name:        "لپ‌تاپ ایسر Nitro 5",
+			Price:       35000000,
+			Description: "لپ‌تاپ گیمینگ با مشخصات بالا",
+			Tags:        []string{"گیمینگ", "پرسرعت", "گرافیک بالا", "گران"},
+			Attributes: []ProductAttribute{
+				{Name: "RAM", Value: "16 گیگ"},
+				{Name: "حافظه داخلی", Value: "512 گیگ SSD"},
+				{Name: "پردازنده", Value: "Intel Core i7-11800H"},
+				{Name: "کارت گرافیک", Value: "NVIDIA RTX 3060"},
+				{Name: "صفحه نمایش", Value: "15.6 اینچ FHD"},
+				{Name: "سیستم عامل", Value: "Windows 11"},
+			},
+			CategoryID: categories[0].ID, // لپ‌تاپ
+			InMainPage: true,
+			ImageURL:   "uploads/nitro5.jpg",
+		},
+		{
+			Name:        "آیفون 14 پرو",
+			Price:       65000000,
+			Description: "پرچمدار اپل با دوربین پیشرفته",
+			Tags:        []string{"اپل", "پرچمدار", "دوربین عالی", "گران قیمت"},
+			Attributes: []ProductAttribute{
+				{Name: "RAM", Value: "6 گیگ"},
+				{Name: "حافظه", Value: "256 گیگ"},
+				{Name: "پردازنده", Value: "Apple A16 Bionic"},
+				{Name: "دوربین اصلی", Value: "48 مگاپیکسل"},
+				{Name: "باتری", Value: "3200 میلی‌آمپر"},
+				{Name: "صفحه نمایش", Value: "6.1 اینچ Super Retina XDR"},
+			},
+			CategoryID: categories[1].ID, // موبایل
+			InMainPage: true,
+			ImageURL:   "uploads/iphone14.jpg",
+		},
+		{
+			Name:        "سامسونگ گلکسی S23",
+			Price:       45000000,
+			Description: "پرچمدار سامسونگ با طراحی مدرن",
+			Tags:        []string{"سامسونگ", "اندروید", "پرچمدار", "باتری قوی"},
+			Attributes: []ProductAttribute{
+				{Name: "RAM", Value: "8 گیگ"},
+				{Name: "حافظه", Value: "256 گیگ"},
+				{Name: "پردازنده", Value: "Snapdragon 8 Gen 2"},
+				{Name: "دوربین اصلی", Value: "50 مگاپیکسل"},
+				{Name: "باتری", Value: "3900 میلی‌آمپر"},
+				{Name: "شارژ", Value: "25 وات"},
+			},
+			CategoryID: categories[1].ID, // موبایل
+			InMainPage: true,
+			ImageURL:   "uploads/galaxys23.jpg",
+		},
+		{
+			Name:        "مک‌بوک پرو M2",
+			Price:       75000000,
+			Description: "لپ‌تاپ اپل با پردازنده M2",
+			Tags:        []string{"اپل", "مک", "طراحی زیبا", "سبک"},
+			Attributes: []ProductAttribute{
+				{Name: "RAM", Value: "16 گیگ"},
+				{Name: "حافظه", Value: "512 گیگ SSD"},
+				{Name: "پردازنده", Value: "Apple M2"},
+				{Name: "صفحه نمایش", Value: "13.3 اینچ Retina"},
+				{Name: "باتری", Value: "تا 17 ساعت کارکرد"},
+				{Name: "وزن", Value: "1.4 کیلوگرم"},
+			},
+			CategoryID: categories[0].ID, // لپ‌تاپ
+			InMainPage: true,
+			ImageURL:   "uploads/macbookm2.jpg",
+		},
+		{
+			Name:        "آیپد پرو 12.9",
+			Price:       40000000,
+			Description: "تبلت قدرتمند اپل با صفحه نمایش عالی",
+			Tags:        []string{"تبلت", "اپل", "طراحی", "قلم نوری"},
+			Attributes: []ProductAttribute{
+				{Name: "RAM", Value: "8 گیگ"},
+				{Name: "حافظه", Value: "128 گیگ"},
+				{Name: "پردازنده", Value: "Apple M1"},
+				{Name: "صفحه نمایش", Value: "12.9 اینچ Liquid Retina XDR"},
+				{Name: "پشتیبانی از قلم", Value: "Apple Pencil 2"},
+				{Name: "سیستم عامل", Value: "iPadOS 16"},
+			},
+			CategoryID: categories[2].ID, // تبلت
+			InMainPage: false,
+			ImageURL:   "uploads/ipdadpro.jpg",
+		},
+		{
+			Name:        "کیس گیمینگ",
+			Price:       4500000,
+			Description: "کیس گیمینگ با RGB و طراحی مهاجم",
+			Tags:        []string{"لوازم جانبی", "گیمینگ", "RGB", "ارزان"},
+			Attributes: []ProductAttribute{
+				{Name: "سایز", Value: "Mid Tower"},
+				{Name: "رنگ", Value: "مشکی"},
+				{Name: "فن‌های از پیش نصب شده", Value: "3 عدد"},
+				{Name: "پنل جانبی", Value: "شیشه‌ای"},
+				{Name: "پورت‌های جلو", Value: "USB 3.0 × 2, Audio"},
+			},
+			CategoryID: categories[4].ID, // لوازم جانبی
+			InMainPage: false,
+			ImageURL:   "uploads/casegaiming.jpg",
+		},
+		{
+			Name:        "ماوس گیمینگ Razer",
+			Price:       2500000,
+			Description: "ماوس حرفه‌ای گیمینگ با DPI بالا",
+			Tags:        []string{"گیمینگ", "Razer", "ماوس", "DPI بالا"},
+			Attributes: []ProductAttribute{
+				{Name: "DPI", Value: "20000"},
+				{Name: "کلیدها", Value: "8 کلید programmable"},
+				{Name: "نورپردازی", Value: "RGB Chroma"},
+				{Name: "اتصال", Value: "باسیم"},
+				{Name: "سنسور", Value: "Optical"},
+			},
+			CategoryID: categories[4].ID, // لوازم جانبی
+			InMainPage: false,
+			ImageURL:   "uploads/mousegaimng.jpg",
+		},
+		{
+			Name:        "مانیتور سامسونگ 4K",
+			Price:       18000000,
+			Description: "مانیتور 32 اینچ 4K با نرخ نوسازی 144Hz",
+			Tags:        []string{"مانیتور", "4K", "گیمینگ", "سامسونگ"},
+			Attributes: []ProductAttribute{
+				{Name: "سایز", Value: "32 اینچ"},
+				{Name: "رزولوشن", Value: "3840x2160 (4K)"},
+				{Name: "نرخ نوسازی", Value: "144Hz"},
+				{Name: "پنل", Value: "IPS"},
+				{Name: "پورت‌ها", Value: "HDMI 2.1, DisplayPort 1.4"},
+			},
+			CategoryID: categories[4].ID, // لوازم جانبی
+			InMainPage: false,
+			ImageURL:   "uploads/SamsungCurved-Monitor-5.jpg",
+		},
+	}
+
+	// حذف داده‌های قدیمی
+	db.Exec("DELETE FROM products")
+
+	for _, seedProduct := range products {
+		// تبدیل SeedProduct به Product
+		product := convertSeedToProduct(seedProduct)
+
+		// اضافه کردن تاریخ‌ها
+		product.CreatedAt = time.Now()
+		product.UpdatedAt = time.Now()
+
+		// ایجاد محصول در دیتابیس
+		if err := db.Create(&product).Error; err != nil {
+			return err
+		}
+
+	}
+
+	return nil
+}
+
+// تبدیل SeedProduct به Product
+func convertSeedToProduct(seed SeedProduct) models.Product {
+	// تبدیل تگ‌ها به JSON
+	tagsJSON, _ := json.Marshal(seed.Tags)
+
+	// تبدیل مشخصات به JSON
+	attributesJSON, _ := json.Marshal(seed.Attributes)
+
+	return models.Product{
+		Name:        seed.Name,
+		Price:       seed.Price,
+		Description: seed.Description,
+		Tags:        datatypes.JSON(tagsJSON),
+		Attributes:  datatypes.JSON(attributesJSON),
+		CategoryID:  seed.CategoryID,
+		InMainPage:  seed.InMainPage,
+		ImageURL:    seed.ImageURL,
+	}
 }

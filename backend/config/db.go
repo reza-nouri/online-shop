@@ -21,7 +21,7 @@ func ConnectDB() {
 		log.Fatal("Failed to connect DB")
 	}
 
-	database.AutoMigrate(&models.User{}, &models.Product{})
+	database.AutoMigrate(&models.User{}, &models.Product{}, &models.Review{})
 	DB = database
 	fmt.Println("Database connected")
 }
